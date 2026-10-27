@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>คำนวณ BMI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+@property --accent { syntax: '<color>'; inherits: true; initial-value: #4FA37A; }
+:root {
+  --ink: #12303B;
+  --muted: #5B7580;
+  --paper: #F3F8F9;
+  --card: rgba(255,255,255,.72);
+  --line: rgba(18,48,59,.12);
+  --accent: #4FA37A;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #E8F3F5; --muted: #9DB6BE; --paper: #0D1F26;
+    --card: rgba(22,48,58,.72); --line: rgba(232,243,245,.14);
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; margin: 0; }
+html, body { min-height: 100%; }
+body {
+  font-family: 'Prompt', 'Noto Sans Thai', system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+  transition: --accent .9s ease;
+  position: relative;
+  overflow-x: hidden;
+  padding: 32px 20px 48px;
+}
+/* ฉากหลัง: ก้อนสีลอยตัว เปลี่ยนสีตามผลลัพธ์ */
+.bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.blob {
+  position: absolute; border-radius: 50%; filter: blur(70px);
+  background: var(--accent); opacity: .32;
+  animation: drift 18s ease-in-out infinite alternate;
+}
+.blob.b1 { width: 46vmax; height: 46vmax; left: -14vmax; top: -16vmax; }
+.blob.b2 { width: 38vmax; height: 38vmax; right: -12vmax; bottom: -14vmax; animation-duration: 24s; opacity: .26; }
+.blob.b3 { width: 22vmax; height: 22vmax; left: 52%; top: 30%; animation-duration: 30s; opacity: .14; }
+@keyframes drift {
+  from { transform: translate(0,0) scale(1); }
+  to   { transform: translate(5vmax,4vmax) scale(1.18); }
+}
+main { position: relative; z-index: 1; max-width: 980px; margin: 0 auto; }
+header { margin-bottom: 28px; }
+h1 { font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 700; letter-spacing: -.01em; line-height: 1.15; }
+header p { color: var(--muted); margin-top: 8px; font-weight: 300; font-size: 1.05rem; }
+
+.grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 24px; align-items: stretch; }
+@media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
+.card {
+  background: var(--card);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  padding: 28px;
+  box-shadow: 0 18px 50px -24px rgba(18,48,59,.35);
+}
+
+/* ฟอร์ม */
+.field + .field { margin-top: 28px; }
+.field-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+label { font-weight: 500; font-size: 1.05rem; }
+.num { display: flex; align-items: baseline; gap: 6px; }
+.num input {
+  width: 5.2ch; font: inherit; font-size: 1.9rem; font-weight: 600; text-align: right;
+  color: var(--ink); background: transparent; border: 0; border-bottom: 2px solid var(--line);
+  padding: 0 2px; border-radius: 0; transition: border-color .3s;
+  -moz-appearance: textfield;
+}
+.num input::-webkit-outer-spin-button, .num input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.num input:focus-visible { outline: none; border-color: var(--accent); }
+.num span { color: var(--muted); font-weight: 300; }
+
+input[type=range] {
+  -webkit-appearance: none; appearance: none; width: 100%; height: 8px; border-radius: 8px; cursor: pointer;
+  background: linear-gradient(to right, var(--accent) var(--p, 50%), var(--line) var(--p, 50%));
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 28px; height: 28px; border-radius: 50%;
+  background: #fff; border: 4px solid var(--accent); box-shadow: 0 4px 12px rgba(0,0,0,.2);
+  transition: transform .2s cubic-bezier(.3,1.6,.5,1);
+}
+input[type=range]::-moz-range-thumb {
+  width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 4px solid var(--accent);
+}
+input[type=range]:active::-webkit-slider-thumb { transform: scale(1.25); }
+input[type=range]:focus-visible { outline: 3px solid var(--accent); outline-offset: 6px; }
+
+.reset {
+  margin-top: 30px; width: 100%; padding: 14px; font: inherit; font-weight: 500; font-size: 1rem;
+  color: var(--ink); background: transparent; border: 1.5px solid var(--line); border-radius: 16px; cursor: pointer;
+  transition: background .25s, transform .15s;
+}
+.reset:hover { background: var(--line); }
+.reset:active { transform: scale(.98); }
+.reset:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+
+/* เกจ */
+.gauge-card { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.gauge { width: 100%; max-width: 440px; overflow: visible; }
+.seg { fill: none; stroke-width: 26; stroke-linecap: butt; opacity: .35; transition: opacity .5s, stroke-width .5s; }
+.seg.on { opacity: 1; stroke-width: 32; }
+.tick { font-size: 11px; fill: var(--muted); text-anchor: middle; font-family: inherit; }
+#needle { transform-origin: 200px 200px; transform-box: view-box; transform: rotate(-90deg);
+  transition: transform 1.3s cubic-bezier(.34,1.45,.5,1); }
+#needle line { stroke: var(--ink); stroke-width: 5; stroke-linecap: round; }
+#needle circle { fill: var(--ink); }
+.hub { fill: var(--paper); stroke: var(--ink); stroke-width: 4; }
+
+.value { margin-top: -6px; font-size: clamp(3.4rem, 9vw, 4.8rem); font-weight: 700; line-height: 1; color: var(--accent); transition: color .9s; font-variant-numeric: tabular-nums; }
+.cat { margin-top: 10px; font-size: 1.5rem; font-weight: 600; }
+.cat.pop { animation: pop .6s cubic-bezier(.3,1.6,.5,1); }
+@keyframes pop { from { transform: scale(.82); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.tip { margin-top: 8px; color: var(--muted); font-weight: 300; max-width: 36ch; min-height: 3em; }
+.stats { display: flex; gap: 12px; margin-top: 20px; width: 100%; flex-wrap: wrap; }
+.stat { flex: 1 1 140px; padding: 14px 16px; border-radius: 18px; background: rgba(127,127,127,.09); text-align: left; }
+.stat small { display: block; color: var(--muted); font-weight: 300; font-size: .85rem; }
+.stat b { font-size: 1.15rem; font-weight: 600; }
+
+.note { margin-top: 20px; font-size: .82rem; color: var(--muted); font-weight: 300; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+@media (prefers-reduced-motion: reduce) {
+  .blob { animation: none; }
+  #needle { transition: none; }
+  .cat.pop { animation: none; }
+}
+</style>
+</head>
+<body>
+<div class="bg" aria-hidden="true"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+
+<main>
+  <header>
+    <h1>ดัชนีมวลกาย (BMI)</h1>
+    <p>เลื่อนแถบน้ำหนักและส่วนสูง แล้วดูผลเปลี่ยนทันที</p>
+  </header>
+
+  <div class="grid">
+    <section class="card" aria-label="กรอกข้อมูล">
+      <div class="field">
+        <div class="field-top">
+          <label for="height">ส่วนสูง</label>
+          <div class="num"><input id="heightNum" type="number" inputmode="decimal" min="100" max="220" step="1" value="170" aria-label="ส่วนสูง (ซม.)"><span>ซม.</span></div>
+        </div>
+        <input id="height" type="range" min="100" max="220" step="1" value="170">
+      </div>
+      <div class="field">
+        <div class="field-top">
+          <label for="weight">น้ำหนัก</label>
+          <div class="num"><input id="weightNum" type="number" inputmode="decimal" min="30" max="200" step="0.5" value="65" aria-label="น้ำหนัก (กก.)"><span>กก.</span></div>
+        </div>
+        <input id="weight" type="range" min="30" max="200" step="0.5" value="65">
+      </div>
+      <button class="reset" id="reset" type="button">ล้างค่าและเริ่มใหม่</button>
+      <p class="note">เกณฑ์ตามองค์การอนามัยโลกสำหรับคนเอเชีย ผลนี้เป็นเพียงข้อมูลเบื้องต้น ไม่ใช่การวินิจฉัยทางการแพทย์</p>
+    </section>
+
+    <section class="card gauge-card" aria-label="ผลลัพธ์">
+      <svg class="gauge" viewBox="0 0 400 225" role="img" aria-label="เกจแสดงค่า BMI">
+        <g id="segs"></g>
+        <g id="ticks"></g>
+        <g id="needle"><line x1="200" y1="200" x2="200" y2="62"/><circle cx="200" cy="62" r="6"/></g>
+        <circle class="hub" cx="200" cy="200" r="14"/>
+      </svg>
+      <div class="value" id="value" aria-live="polite">0.0</div>
+      <div class="cat" id="cat">—</div>
+      <p class="tip" id="tip"></p>
+      <div class="stats">
+        <div class="stat"><small>น้ำหนักที่เหมาะสม</small><b id="ideal">—</b></div>
+        <div class="stat"><small id="diffLabel">ผลต่าง</small><b id="diff">—</b></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<script>
+(function () {
+  // เกณฑ์ BMI สำหรับคนเอเชีย
+  var CATS = [
+    { max: 18.5, name: 'น้ำหนักน้อย',   color: '#4A9FD8', tip: 'ต่ำกว่าเกณฑ์ ลองเพิ่มอาหารที่มีประโยชน์และออกกำลังกายสร้างกล้ามเนื้อ' },
+    { max: 23,   name: 'สมส่วน',        color: '#4FA37A', tip: 'อยู่ในเกณฑ์ปกติ รักษาพฤติกรรมที่ดีนี้ไว้ต่อไป' },
+    { max: 25,   name: 'น้ำหนักเกิน',   color: '#E2A92F', tip: 'เริ่มสูงกว่าเกณฑ์เล็กน้อย ปรับอาหารและขยับตัวให้มากขึ้นได้เลย' },
+    { max: 30,   name: 'โรคอ้วนระดับ 1', color: '#E9833A', tip: 'ควรควบคุมอาหารและออกกำลังกายสม่ำเสมอ' },
+    { max: 99,   name: 'โรคอ้วนระดับ 2', color: '#D94F4F', tip: 'ควรปรึกษาแพทย์หรือนักโภชนาการเพื่อวางแผนดูแลสุขภาพ' }
+  ];
+  var MIN = 10, MAX = 40, CX = 200, CY = 200, R = 165;
+  var $ = function (id) { return document.getElementById(id); };
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function pt(v) {
+    var a = Math.PI * (1 - (v - MIN) / (MAX - MIN));
+    return [CX + R * Math.cos(a), CY - R * Math.sin(a)];
+  }
+  function arc(a, b) {
+    var p1 = pt(a), p2 = pt(b);
+    return 'M' + p1[0].toFixed(2) + ' ' + p1[1].toFixed(2) + ' A' + R + ' ' + R + ' 0 0 1 ' + p2[0].toFixed(2) + ' ' + p2[1].toFixed(2);
+  }
+
+  // วาดช่วงสีของเกจ
+  var NS = 'http://www.w3.org/2000/svg', segEls = [], from = MIN;
+  CATS.forEach(function (c, i) {
+    var to = Math.min(c.max, MAX);
+    var p = document.createElementNS(NS, 'path');
+    p.setAttribute('d', arc(from + .15, to - .15));
+    p.setAttribute('class', 'seg');
+    p.setAttribute('stroke', c.color);
+    $('segs').appendChild(p); segEls.push(p);
+    from = to;
+  });
+  [18.5, 23, 25, 30].forEach(function (v) {
+    var a = Math.PI * (1 - (v - MIN) / (MAX - MIN)), r = R + 28;
+    var t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', CX + r * Math.cos(a)); t.setAttribute('y', CY - r * Math.sin(a) + 4);
+    t.setAttribute('class', 'tick'); t.textContent = v;
+    $('ticks').appendChild(t);
+  });
+
+  var hR = $('height'), hN = $('heightNum'), wR = $('weight'), wN = $('weightNum');
+  var shown = MIN, raf, lastCat = -1;
+
+  function catIndex(b) { for (var i = 0; i < CATS.length; i++) if (b < CATS[i].max) return i; return CATS.length - 1; }
+  function paintRange(el) { el.style.setProperty('--p', ((el.value - el.min) / (el.max - el.min) * 100) + '%'); }
+  function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
+
+  function countTo(target) {
+    cancelAnimationFrame(raf);
+    if (reduce) { shown = target; $('value').textContent = target.toFixed(1); return; }
+    var start = shown, t0 = performance.now(), dur = 1000;
+    (function step(now) {
+      var k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      shown = start + (target - start) * e;
+      $('value').textContent = shown.toFixed(1);
+      if (k < 1) raf = requestAnimationFrame(step);
+    })(t0);
+  }
+
+  function update() {
+    var h = parseFloat(hN.value), w = parseFloat(wN.value);
+    if (!(h >= 100 && h <= 220 && w >= 30 && w <= 200)) { return; }
+    paintRange(hR); paintRange(wR);
+    var m = h / 100, bmi = w / (m * m), i = catIndex(bmi), c = CATS[i];
+
+    document.documentElement.style.setProperty('--accent', c.color);
+    var t = clamp((bmi - MIN) / (MAX - MIN), 0, 1);
+    $('needle').style.transform = 'rotate(' + (-90 + t * 180) + 'deg)';
+    segEls.forEach(function (s, k) { s.classList.toggle('on', k === i); });
+    countTo(bmi);
+
+    if (i !== lastCat) {
+      var el = $('cat'); el.textContent = c.name; $('tip').textContent = c.tip;
+      el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+      lastCat = i;
+    }
+
+    var lo = 18.5 * m * m, hi = 22.9 * m * m;
+    $('ideal').textContent = lo.toFixed(1) + ' – ' + hi.toFixed(1) + ' กก.';
+    if (w < lo) { $('diffLabel').textContent = 'ควรเพิ่มอีกประมาณ'; $('diff').textContent = (lo - w).toFixed(1) + ' กก.'; }
+    else if (w > hi) { $('diffLabel').textContent = 'ควรลดอีกประมาณ'; $('diff').textContent = (w - hi).toFixed(1) + ' กก.'; }
+    else { $('diffLabel').textContent = 'สถานะ'; $('diff').textContent = 'อยู่ในช่วงที่เหมาะสม'; }
+  }
+
+  function link(range, num) {
+    range.addEventListener('input', function () { num.value = range.value; update(); });
+    num.addEventListener('input', function () {
+      var v = parseFloat(num.value);
+      if (!isNaN(v)) { range.value = clamp(v, +range.min, +range.max); update(); }
+    });
+    num.addEventListener('blur', function () {
+      var v = parseFloat(num.value);
+      num.value = isNaN(v) ? range.value : clamp(v, +range.min, +range.max);
+      range.value = num.value; update();
+    });
+  }
+  link(hR, hN); link(wR, wN);
+
+  $('reset').addEventListener('click', function () {
+    hR.value = hN.value = 170; wR.value = wN.value = 65;
+    shown = MIN; lastCat = -1;
+    $('needle').style.transform = 'rotate(-90deg)';
+    setTimeout(update, 60);
+  });
+
+  // เปิดหน้า: เข็มกวาดจากซ้ายสุดมาที่ค่าจริง
+  paintRange(hR); paintRange(wR);
+  setTimeout(update, 250);
+})();
+</script>
+</body>
+</html>
